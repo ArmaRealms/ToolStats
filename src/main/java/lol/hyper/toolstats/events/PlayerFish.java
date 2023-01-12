@@ -20,7 +20,6 @@ package lol.hyper.toolstats.events;
 import lol.hyper.toolstats.ToolStats;
 import lol.hyper.toolstats.tools.ItemChecker;
 import lol.hyper.toolstats.tools.UUIDDataType;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
@@ -30,11 +29,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -46,7 +45,7 @@ public class PlayerFish implements Listener {
         this.toolStats = toolStats;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onFish(PlayerFishEvent event) {
         if (event.isCancelled()) {
             return;
@@ -61,13 +60,31 @@ public class PlayerFish implements Listener {
             return;
         }
         // make sure the player is holding a fishing rod
-        ItemStack heldItem = player.getInventory().getItem(player.getInventory().getHeldItemSlot());
-        if (heldItem == null || heldItem.getType() == Material.AIR || heldItem.getType() != Material.FISHING_ROD) {
+        // player can fish with their offhand
+        PlayerInventory inventory = player.getInventory();
+        boolean isMainHand = inventory.getItemInMainHand().getType() == Material.FISHING_ROD;
+        boolean isOffHand = inventory.getItemInOffHand().getType() == Material.FISHING_ROD;
+        ItemStack fishingRod = null;
+        if (isMainHand) {
+            fishingRod = inventory.getItemInMainHand();
+        }
+        if (isOffHand) {
+            fishingRod = inventory.getItemInOffHand();
+        }
+
+        // if the player is hold fishing rods in both hands
+        // default to main hand since that takes priority
+        if (isMainHand && isOffHand) {
+            fishingRod = inventory.getItemInMainHand();
+        }
+
+        // player swapped items?
+        if (fishingRod == null) {
             return;
         }
 
-        // fix compatability issues by running 1 tick later
-        Bukkit.getScheduler().runTaskLater(toolStats, () -> updateFishCount(heldItem), 1);
+        // update the fishing rod!
+        updateFishCount(fishingRod);
 
         // check if the player caught an item
         if (event.getCaught() == null) {
@@ -108,39 +125,16 @@ public class PlayerFish implements Listener {
         fishCaught++;
         container.set(toolStats.fishingRodCaught, PersistentDataType.INTEGER, fishCaught);
 
-        String fishCaughtLore = toolStats.getLoreFromConfig("fished.fish-caught", false);
-        String fishCaughtLoreRaw = toolStats.getLoreFromConfig("fished.fish-caught", true);
+        String fishCaughtFormatted = toolStats.numberFormat.formatInt(fishCaught);
+        List<String> newLore = toolStats.itemLore.addItemLore(meta, "{fish}", fishCaughtFormatted, "fished.fish-caught");
 
-        if (fishCaughtLore == null || fishCaughtLoreRaw == null) {
-            toolStats.logger.warning("There is no lore message for messages.fish-caught!");
+        // if the list returned null, don't add it
+        if (newLore == null) {
             return;
         }
 
-        List<String> lore;
-        String newLine = fishCaughtLoreRaw.replace("{fish}", toolStats.numberFormat.formatInt(fishCaught));
-        if (meta.hasLore()) {
-            lore = meta.getLore();
-            boolean hasLore = false;
-            // we do a for loop like this, we can keep track of index
-            // this doesn't mess the lore up of existing items
-            for (int x = 0; x < lore.size(); x++) {
-                if (lore.get(x).contains(fishCaughtLore)) {
-                    hasLore = true;
-                    lore.set(x, newLine);
-                    break;
-                }
-            }
-            // if the item has lore but doesn't have the tag, add it
-            if (!hasLore) {
-                lore.add(newLine);
-            }
-        } else {
-            // if the item has no lore, create a new list and add the string
-            lore = new ArrayList<>();
-            lore.add(newLine);
-        }
         if (toolStats.config.getBoolean("enabled.fish-caught")) {
-            meta.setLore(lore);
+            meta.setLore(newLore);
         }
         fishingRod.setItemMeta(meta);
     }
@@ -169,25 +163,11 @@ public class PlayerFish implements Listener {
         container.set(toolStats.timeCreated, PersistentDataType.LONG, timeCreated);
         container.set(toolStats.genericOwner, new UUIDDataType(), owner.getUniqueId());
 
-        String caughtByLoreRaw = toolStats.getLoreFromConfig("fished.caught-by", true);
-        String caughtOnLoreRaw = toolStats.getLoreFromConfig("fished.caught-on", true);
+        String formattedDate = toolStats.numberFormat.formatDate(finalDate);
+        List<String> newLore = toolStats.itemLore.addNewOwner(meta, owner.getName(), formattedDate, "FISHED");
 
-        if (caughtByLoreRaw == null || caughtOnLoreRaw == null) {
-            toolStats.logger.warning("There is no lore message for messages.fished!");
-            return null;
-        }
-
-        List<String> lore;
-        if (meta.hasLore()) {
-            lore = meta.getLore();
-            assert lore != null;
-        } else {
-            lore = new ArrayList<>();
-        }
         if (toolStats.checkConfig(newItem, "fished-tag")) {
-            lore.add(caughtOnLoreRaw.replace("{date}", toolStats.numberFormat.formatDate(finalDate)));
-            lore.add(caughtByLoreRaw.replace("{player}", owner.getName()));
-            meta.setLore(lore);
+            meta.setLore(newLore);
         }
         newItem.setItemMeta(meta);
         return newItem;

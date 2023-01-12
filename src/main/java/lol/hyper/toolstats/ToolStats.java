@@ -21,6 +21,7 @@ import lol.hyper.githubreleaseapi.GitHubRelease;
 import lol.hyper.githubreleaseapi.GitHubReleaseAPI;
 import lol.hyper.toolstats.commands.CommandToolStats;
 import lol.hyper.toolstats.events.*;
+import lol.hyper.toolstats.tools.ItemLore;
 import lol.hyper.toolstats.tools.NumberFormat;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bstats.bukkit.Metrics;
@@ -69,6 +70,7 @@ public final class ToolStats extends JavaPlugin {
     public SheepShear sheepShear;
     public VillagerTrade villagerTrade;
     public CommandToolStats commandToolStats;
+    public ItemLore itemLore;
 
     public final Logger logger = this.getLogger();
     public final File configFile = new File(this.getDataFolder(), "config.yml");
@@ -99,6 +101,7 @@ public final class ToolStats extends JavaPlugin {
         sheepShear = new SheepShear(this);
         villagerTrade = new VillagerTrade(this);
         commandToolStats = new CommandToolStats(this);
+        itemLore = new ItemLore(this);
 
         Bukkit.getServer().getPluginManager().registerEvents(blocksMined, this);
         Bukkit.getServer().getPluginManager().registerEvents(chunkPopulate, this);
@@ -233,30 +236,14 @@ public final class ToolStats extends JavaPlugin {
             // this is a dirty trick to remove color codes
             lore = ChatColor.translateAlternateColorCodes('&', lore);
             lore = ChatColor.stripColor(lore);
-            if (lore.contains("{player}")) {
-                lore = lore.replace("{player}", "");
-            }
-            if (lore.contains("{date}")) {
-                lore = lore.replace("{date}", "");
-            }
-            if (lore.contains("{name}")) {
-                lore = lore.replace("{name}", "");
-            }
-            if (lore.contains("{kills}")) {
-                lore = lore.replace("{kills}", "");
-            }
-            if (lore.contains("{blocks}")) {
-                lore = lore.replace("{blocks}", "");
-            }
-            if (lore.contains("{sheep}")) {
-                lore = lore.replace("{sheep}", "");
-            }
-            if (lore.contains("{damage}")) {
-                lore = lore.replace("{damage}", "");
-            }
-            if (lore.contains("{fish}")) {
-                lore = lore.replace("{fish}", "");
-            }
+            lore = lore.replace("{player}", "");
+            lore = lore.replace("{date}", "");
+            lore = lore.replace("{name}", "");
+            lore = lore.replace("{kills}", "");
+            lore = lore.replace("{blocks}", "");
+            lore = lore.replace("{sheep}", "");
+            lore = lore.replace("{damage}", "");
+            lore = lore.replace("{fish}", "");
         }
         return lore;
     }
