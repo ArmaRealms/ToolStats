@@ -21,6 +21,7 @@ import lol.hyper.toolstats.ToolStats;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -47,7 +48,7 @@ public class ItemLore {
         if (configLore == null || configLoreRaw == null) {
             toolStats.logger.warning("There is no lore message for messages." + configLorePath + "!");
             toolStats.logger.warning("Unable to update lore for item.");
-            return null;
+            return itemMeta.getLore();
         }
 
         List<String> newLore;
@@ -112,13 +113,14 @@ public class ItemLore {
             case "TRADED": {
                 dateCreated = toolStats.getLoreFromConfig("traded.traded-on", true);
                 itemOwner = toolStats.getLoreFromConfig("traded.traded-by", true);
+                break;
             }
         }
 
         if (dateCreated == null || itemOwner == null) {
             toolStats.logger.warning("There is no lore message for messages." + type.toLowerCase(Locale.ENGLISH) + "!");
             toolStats.logger.warning("Unable to update lore for item.");
-            return null;
+            return itemMeta.getLore();
         }
 
         List<String> newLore;
